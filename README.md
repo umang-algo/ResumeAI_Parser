@@ -33,7 +33,7 @@ The **ResumeAI-Parser+** is a Streamlit-based application that allows users to u
 1. **Clone the repository**
 
     ```bash
-    https://github.com/umang-algo/ResumeAI-Parser.git
+    https://github.com/umang-algo/ResumeAI_Parser.git
     cd resumeai_parser
     ```
 
