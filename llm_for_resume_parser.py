@@ -75,20 +75,24 @@ def extract_resume_info(resume_text, api_key):
     """
     return get_completion(prompt, api_key)
 
-# Function to parse extracted information into structured format
+# Function to parse extracted information into structured format with durations and separate columns
 def parse_extracted_info(extracted_info):
     lines = extracted_info.splitlines()
     data = {
         'Name': 'Not available',
-        'Education': 'Not available',
-        'Work Experience': 'Not available',
-        'Skills': 'Not available'
+        'Institution': [],
+        'Degree': [],
+        'Major': [],
+        'Education Duration': [],
+        'Company': [],
+        'Role': [],
+        'Work Duration': [],
+        'Skills': []
     }
 
     current_section = None
-    education_list = []
-    work_experience_list = []
-    skills_list = []
+    current_education = {}
+    current_experience = {}
 
     for line in lines:
         line = line.strip()
@@ -100,21 +104,77 @@ def parse_extracted_info(extracted_info):
             current_section = "Work Experience"
         elif line.startswith("Skills:"):
             current_section = "Skills"
-        elif current_section == "Education" and line.startswith("-"):
-            education_list.append(line[1:].strip())
-        elif current_section == "Work Experience" and line.startswith("-"):
-            work_experience_list.append(line[1:].strip())
+        elif current_section == "Education" and line.startswith("- Institution:"):
+            if current_education:
+                data['Institution'].append(current_education.get('Institution', ''))
+                data['Degree'].append(current_education.get('Degree', ''))
+                data['Major'].append(current_education.get('Major', ''))
+                data['Education Duration'].append(current_education.get('Duration', ''))
+            current_education = {"Institution": line.split(":", 1)[1].strip()}
+        elif current_section == "Education" and line.startswith("Degree:"):
+            current_education["Degree"] = line.split(":", 1)[1].strip()
+        elif current_section == "Education" and line.startswith("Major:"):
+            current_education["Major"] = line.split(":", 1)[1].strip()
+        elif current_section == "Education" and line.startswith("Duration:"):
+            current_education["Duration"] = line.split(":", 1)[1].strip()
+        elif current_section == "Work Experience" and line.startswith("- Company:"):
+            if current_experience:
+                data['Company'].append(current_experience.get('Company', ''))
+                data['Role'].append(current_experience.get('Role', ''))
+                data['Work Duration'].append(current_experience.get('Duration', ''))
+            current_experience = {"Company": line.split(":", 1)[1].strip()}
+        elif current_section == "Work Experience" and line.startswith("Role:"):
+            current_experience["Role"] = line.split(":", 1)[1].strip()
+        elif current_section == "Work Experience" and line.startswith("Duration:"):
+            current_experience["Duration"] = line.split(":", 1)[1].strip()
         elif current_section == "Skills" and line.startswith("-"):
-            skills_list.append(line[1:].strip())
+            data['Skills'].append(line[1:].strip())
 
-    if education_list:
-        data['Education'] = "\n".join(education_list)
-    if work_experience_list:
-        data['Work Experience'] = "\n".join(work_experience_list)
-    if skills_list:
-        data['Skills'] = "\n".join(skills_list)
+    # Add the last education and work experience entries
+    if current_education:
+        data['Institution'].append(current_education.get('Institution', ''))
+        data['Degree'].append(current_education.get('Degree', ''))
+        data['Major'].append(current_education.get('Major', ''))
+        data['Education Duration'].append(current_education.get('Duration', ''))
+    if current_experience:
+        data['Company'].append(current_experience.get('Company', ''))
+        data['Role'].append(current_experience.get('Role', ''))
+        data['Work Duration'].append(current_experience.get('Duration', ''))
 
-    return pd.DataFrame([data])
+    # Pad lists to the same length
+    max_len = max(
+        len(data['Institution']),
+        len(data['Company']),
+        len(data['Degree']),
+        len(data['Major']),
+        len(data['Education Duration']),
+        len(data['Role']),
+        len(data['Work Duration'])
+    )
+
+    for key in ['Institution', 'Degree', 'Major', 'Education Duration', 'Company', 'Role', 'Work Duration']:
+        while len(data[key]) < max_len:
+            data[key].append('')
+
+    # Pad the Skills list to match the length
+    data['Skills'] = [", ".join(data['Skills'])] * max_len
+
+    # Convert the data into a DataFrame
+    df = pd.DataFrame({
+        'Name': [data['Name']] * max_len,
+        'Institution': data['Institution'],
+        'Degree': data['Degree'],
+        'Major': data['Major'],
+        'Education Duration': data['Education Duration'],
+        'Company': data['Company'],
+        'Role': data['Role'],
+        'Work Duration': data['Work Duration'],
+        'Skills': data['Skills']
+    })
+
+    return df
+
+
 
 # Streamlit app
 st.title("Resume Information Extractor")
