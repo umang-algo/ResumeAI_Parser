@@ -177,7 +177,7 @@ def parse_extracted_info(extracted_info):
 
 
 # Streamlit app
-st.title("Resume Information Extractor")
+st.title("Data Talk")
 
 # Collect OpenAI API key
 openai_api_key = st.text_input("Enter your OpenAI API key:", type="password")
